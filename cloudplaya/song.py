@@ -20,8 +20,8 @@ class Song(object):
         self.album_name = metadata['albumName']
         self.artist_name = metadata['artistName']
         self.album_artist_name = metadata['albumArtistName']
-        self.track_num = int(metadata['trackNum'])
-        self.disc_num = int(metadata['discNum'])
+        self.track_num = int(metadata.get('trackNum', 0))
+        self.disc_num = int(metadata.get('discNum', 0))
         self.sort_album_artist_name = metadata['sortAlbumArtistName']
         self.sort_album_name = metadata['sortAlbumName']
 
