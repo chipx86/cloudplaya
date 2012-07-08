@@ -297,6 +297,7 @@ class Client(object):
             'Origin': self.ORIGIN,
             'Cookie': self.cookies,
             'Host': 'www.amazon.com',
+            'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
         }
 
         data.update({

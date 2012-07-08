@@ -19,8 +19,9 @@ class Command(object):
     def output_item_formatted(self, item):
         try:
             fmt = self.options.format.decode('string_escape')
+            s = fmt % item.__dict__
 
-            print fmt % item.__dict__
+            print s.encode('utf-8')
         except KeyError, e:
             sys.stderr.write('Invalid format string key: %s' % e)
             sys.exit(1)
