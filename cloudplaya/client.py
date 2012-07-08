@@ -55,7 +55,8 @@ class Client(object):
               'ref_=gno_yam_cldplyr&'
     ORIGIN = 'https://www.amazon.com'
 
-    def __init__(self):
+    def __init__(self, session_file=None):
+        self.session_file = session_file
         self.customer_id = None
         self.adp_token = None
         self.device_id = None
@@ -63,7 +64,19 @@ class Client(object):
         self.cookies = None
         self.authenticated = False
 
-        self._load_config()
+        if not self.session_file:
+            if 'APPDATA' in os.environ:
+                homepath = os.environ['APPDATA']
+            elif 'HOME' in os.environ:
+                homepath = os.environ["HOME"]
+            else:
+                logging.warning('Unable to find home directory for '
+                                '.cloudplayarc\n')
+                homepath = os.getcwd()
+
+            self.session_file = os.path.join(homepath, '.cloudplayasession')
+
+        self._load_session()
 
     def authenticate(self, username, password):
         browser = mechanize.Browser(factory=mechanize.RobustFactory())
@@ -128,13 +141,11 @@ class Client(object):
         auth_vars['cookies'] = '; '.join(['%s=%s' % (cookie.name, cookie.value)
                                           for cookie in cookiejar])
 
-        config_path = self._get_config_path()
-
-        f = open(config_path, 'w')
+        f = open(self.session_file, 'w')
         f.write(json.dumps(auth_vars))
         f.close()
 
-        self._load_config()
+        self._load_session()
 
         return True
 
@@ -306,35 +317,21 @@ class Client(object):
 
         return result
 
-    def _load_config(self):
-        config_path = self._get_config_path()
-
-        if not os.path.exists(config_path):
+    def _load_session(self):
+        if not os.path.exists(self.session_file):
             self.authenticated = False
             return
 
-        f = open(config_path, 'r')
-        config = json.loads(f.read())
+        f = open(self.session_file, 'r')
+        session = json.loads(f.read())
         f.close()
 
-        self.customer_id = config['customer_id']
-        self.adp_token = config['adp_token']
-        self.device_id = config['device_id']
-        self.device_type = config['device_type']
-        self.cookies = config['cookies']
+        self.customer_id = session['customer_id']
+        self.adp_token = session['adp_token']
+        self.device_id = session['device_id']
+        self.device_type = session['device_type']
+        self.cookies = session['cookies']
         self.authenticated = True
-
-    def _get_config_path(self):
-        if 'APPDATA' in os.environ:
-            homepath = os.environ['APPDATA']
-        elif 'HOME' in os.environ:
-            homepath = os.environ["HOME"]
-        else:
-            logging.warning('Unable to find home directory for '
-                            '.cloudplayarc\n')
-            homepath = ''
-
-        return os.path.join(homepath, '.cloudplayarc')
 
     def _make_request_id(self):
         def get_rand():

@@ -35,11 +35,15 @@ class Authenticate(Command):
                           help='the password for your user')
 
     def run(self):
-        if self.client.authenticate(self.options.username,
-                                    self.options.password):
-            print 'Authenticated successfully.'
-        else:
-            sys.stderr.write('Authentication failed.\n')
+        try:
+            if self.client.authenticate(self.options.username,
+                                        self.options.password):
+                print 'Authenticated successfully.'
+            else:
+                sys.stderr.write('Authentication failed.\n')
+                sys.exit(1)
+        except IOError, e:
+            sys.stderr.write('Unable to write authentication data: %s' % e)
             sys.exit(1)
 
 
@@ -252,9 +256,9 @@ def parse_options(args):
 
     parser = OptionParser(usage=usage,
                           version='%prog ' + VERSION)
+    parser.add_option('--session-file', default=None,
+                      help='the session file to use')
     parser.disable_interspersed_args()
-
-    # TODO: Customer ID, ADP token, device ID, device type, cookie
 
     options, args = parser.parse_args(args)
 
@@ -278,14 +282,14 @@ def parse_options(args):
 def main():
     options, command = parse_options(sys.argv[1:])
 
-    client = Client()
+    client = Client(session_file=options.session_file)
 
     if not client.authenticated and command != COMMANDS['authenticate']:
         sys.stderr.write('You must authenticate before you can use '
                          'cloudplaya:\n')
         sys.stderr.write('    $ cloud-playa authenticate --username <username> '
                          '--password <password>\n')
-        sys.exit(1)
+        sys.exit(2)
 
     command.client = client
     command.run()
