@@ -1,0 +1,6 @@
+build
+cloudplaya.egg-info
+dist
+
+*.pyc
+.*.sw*
