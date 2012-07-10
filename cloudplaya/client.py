@@ -29,7 +29,7 @@ class Client(object):
     DEVICE_ID_RE = re.compile(r'amznMusic.did\s*=\s*[\'"](.*)[\'"];')
     DEVICE_TYPE_RE = re.compile(r'amznMusic.dtid\s*=\s*[\'"](.*)[\'"];')
 
-    DEFAULT_SONG_SORT = [('sortTitle', 'ASC')]
+    DEFAULT_SONG_SORT = [('trackNum', 'ASC'), ('sortTitle', 'ASC')]
     SONG_SEARCH = [
         ('keywords', 'LIKE', ''),
         ('assetType', 'EQUALS', 'AUDIO'),
