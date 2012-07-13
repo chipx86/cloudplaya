@@ -98,7 +98,9 @@ class DownloadAlbum(Command):
                 sys.exit(1)
 
             out_path = os.path.join(out_dir, out_filename)
-            os.makedirs(os.path.dirname(out_path))
+
+            if not os.path.exists(os.path.dirname(out_path)):
+                os.makedirs(os.path.dirname(out_path))
 
             print 'Downloading %s...' % out_path
             r = requests.get(url)
