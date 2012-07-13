@@ -3,7 +3,7 @@ class Album(object):
         'albumArtistName', 'albumName', 'artistName', 'objectId',
         'primaryGenre', 'sortAlbumArtistName', 'sortAlbumName',
         'sortArtistName', 'albumCoverImageMedium', 'albumAsin',
-        'artistAsin', 'gracenoteId',
+        'artistAsin', 'gracenoteId', 'albumReleaseDate',
     ]
 
     def __init__(self, client, payload):
@@ -14,6 +14,7 @@ class Album(object):
         self.name = metadata['albumName']
         self.asin = metadata.get('albumAsin', None)
         self.num_tracks = int(payload['numTracks'])
+        self.release_date = metadata.get('albumReleaseDate', None)
         self.artist_asin = metadata.get('artistAsin', None)
         self.artist_name = metadata['artistName']
         self.primary_genre = metadata['primaryGenre']

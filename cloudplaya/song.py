@@ -3,7 +3,7 @@ class Song(object):
         'albumArtistName', 'albumName', 'artistName', 'assetType',
         'duration', 'objectId', 'sortAlbumArtistName', 'sortAlbumName',
         'sortArtistName', 'title', 'status', 'trackStatus', 'extension',
-        'asin', 'trackNum', 'discNum',
+        'asin', 'trackNum', 'discNum', 'albumReleaseDate',
     ]
 
     def __init__(self, client, payload):
@@ -18,6 +18,7 @@ class Song(object):
         self.duration = metadata['duration']
         self.extension = metadata['extension']
         self.album_name = metadata['albumName']
+        self.album_release_date = metadata.get('albumReleaseDate', None)
         self.artist_name = metadata['artistName']
         self.album_artist_name = metadata['albumArtistName']
         self.track_num = int(metadata.get('trackNum', 0))
