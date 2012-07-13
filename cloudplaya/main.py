@@ -50,8 +50,8 @@ class Authenticate(Command):
 
 class DownloadAlbum(Command):
     """Downloads all the songs in an album."""
-    DEFAULT_FORMAT = os.path.join('%(album_name)s',
-                                  '%(track_num)s. %(title)s.%(extension)s')
+    DEFAULT_FORMAT = os.path.join('%(artist_name)s', '%(album_name)s',
+                                  '%(track_num)02d. %(title)s.%(extension)s')
 
     def add_options(self, parser):
         parser.add_option('--format', default=self.DEFAULT_FORMAT,
