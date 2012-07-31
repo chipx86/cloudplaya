@@ -1,5 +1,5 @@
-cloudplay
-=========
+cloudplaya
+==========
 
 cloudplaya is a Python library and command line utility for querying Amazon's
 Cloud Player service. It can be used to build playlists, download songs, or
