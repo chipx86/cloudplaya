@@ -24,10 +24,7 @@ class Client(object):
     PLAYER_URL = 'https://www.amazon.com/gp/dmusic/mp3/player'
     API_URL = 'https://www.amazon.com/cirrus/'
 
-    CUSTOMER_ID_RE = re.compile(r'amznMusic.customerId\s*=\s*[\'"](.*)[\'"];')
-    ADP_TOKEN_RE = re.compile(r'amznMusic.tid\s*=\s[\'"](.*)[\'"];')
-    DEVICE_ID_RE = re.compile(r'amznMusic.did\s*=\s*[\'"](.*)[\'"];')
-    DEVICE_TYPE_RE = re.compile(r'amznMusic.dtid\s*=\s*[\'"](.*)[\'"];')
+    APPCONFIG_RE = re.compile('\s*amznMusic.appConfig\s*=\s*({.*});$')
 
     DEFAULT_SONG_SORT = [('trackNum', 'ASC'), ('sortTitle', 'ASC')]
     SONG_SEARCH = [
@@ -58,7 +55,7 @@ class Client(object):
     def __init__(self, session_file=None):
         self.session_file = session_file
         self.customer_id = None
-        self.adp_token = None
+        self.cp_token = None
         self.device_id = None
         self.device_type = None
         self.cookies = None
@@ -106,37 +103,41 @@ class Client(object):
         # Get all the amznMusic variables being set.
         auth_vars = {
             'customer_id': None,
-            'adp_token': None,
+            'cp_token': None,
             'device_id': None,
             'device_type': None,
         }
 
-        vars_map = (('customer_id', self.CUSTOMER_ID_RE),
-                    ('adp_token', self.ADP_TOKEN_RE),
-                    ('device_id', self.DEVICE_ID_RE),
-                    ('device_type', self.DEVICE_TYPE_RE))
-
-        # Record how many of the necessary lines we've found.
-        # At 3, we can bail.
-        found = 0
-
         for line in content.splitlines():
             line = line.strip()
 
-            if line.startswith('amznMusic.'):
-                for key, regex in vars_map:
-                    m = regex.match(line)
+            if line.startswith('amznMusic.appConfig ='):
+                m = self.APPCONFIG_RE.match(line)
 
-                    if m:
-                        found += 1
-                        auth_vars[key] = m.group(1)
-                        break
+                if not m:
+                    logging.error("Unable to find amznMusic.appConfig")
+                    return False
 
-                if found == len(auth_vars):
-                    break
+                data = m.group(1)
 
-        if found != len(auth_vars):
-            return False
+                try:
+                    config = json.loads(data)
+                except ValueError, e:
+                    logging.error("Unable to parse amznMusic.appConfig: %s", e)
+                    return False
+
+                try:
+                    auth_vars['customer_id'] = config['customerId']
+                    auth_vars['device_id'] = config['deviceId']
+                    auth_vars['device_type'] = config['deviceType']
+                    auth_vars['cp_token'] = config['xCpToken']
+                except KeyError, e:
+                    logging.error("Unable to locate key %s in "
+                                  "amznMusic.appConfig" % e)
+                    return False
+
+
+                break
 
         auth_vars['cookies'] = '; '.join(['%s=%s' % (cookie.name, cookie.value)
                                           for cookie in cookiejar])
@@ -290,7 +291,7 @@ class Client(object):
     def _get(self, operation, data):
         headers = {
             'x-amzn-RequestId': self._make_request_id(),
-            'x-adp-token': self.adp_token,
+            'x-cp-token': self.cp_token,
             'x-RequestedWith': 'XMLHttpRequest',
             'User-Agent': self.USER_AGENT,
             'Referer': self.REFERER,
@@ -319,16 +320,20 @@ class Client(object):
         return result
 
     def _load_session(self):
+        self.authenticated = False
+
         if not os.path.exists(self.session_file):
-            self.authenticated = False
             return
 
         f = open(self.session_file, 'r')
         session = json.loads(f.read())
         f.close()
 
+        if 'cp_token' not in session:
+            return
+
         self.customer_id = session['customer_id']
-        self.adp_token = session['adp_token']
+        self.cp_token = session['cp_token']
         self.device_id = session['device_id']
         self.device_type = session['device_type']
         self.cookies = session['cookies']
