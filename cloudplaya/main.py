@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import getpass
 import os
 import sys
 from optparse import OptionGroup, OptionParser
@@ -35,7 +36,8 @@ class Authenticate(Command):
 
     def run(self):
         try:
-            if self.client.authenticate(self.options.username):
+            password = getpass.getpass()
+            if self.client.authenticate(self.options.username, password):
                 print 'Authenticated successfully.'
             else:
                 sys.stderr.write('Authentication failed.\n')
