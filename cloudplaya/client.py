@@ -1,5 +1,6 @@
 import cookielib
 import json
+import getpass
 import logging
 import os
 import math
@@ -21,6 +22,7 @@ class RequestError(Exception):
 
 
 class Client(object):
+    AUTH_URL = 'https://www.amazon.com/ap/signin?_encoding=UTF8&accountStatusPolicy=P1&openid.assoc_handle=usflex&openid.claimed_id=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.identity=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.mode=checkid_setup&openid.ns=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0&openid.ns.pape=http%3A%2F%2Fspecs.openid.net%2Fextensions%2Fpape%2F1.0&openid.pape.max_auth_age=0&openid.return_to=https%3A%2F%2Fwww.amazon.com%2Fgp%2Fdmusic%2Fmp3%2Fplayer%3Fie%3DUTF8%26requestedView%3Dsongs'
     PLAYER_URL = 'https://www.amazon.com/gp/dmusic/mp3/player'
     API_URL = 'https://www.amazon.com/cirrus/'
 
@@ -55,7 +57,10 @@ class Client(object):
     def __init__(self, session_file=None):
         self.session_file = session_file
         self.customer_id = None
-        self.cp_token = None
+        self.csrf_rnd = None
+        self.csrf_token = None
+        self.csrf_ts = None
+
         self.device_id = None
         self.device_type = None
         self.cookies = None
@@ -75,7 +80,7 @@ class Client(object):
 
         self._load_session()
 
-    def authenticate(self, username, password):
+    def authenticate(self, username):
         browser = mechanize.Browser(factory=mechanize.RobustFactory())
         cookiejar = cookielib.LWPCookieJar()
         browser.set_cookiejar(cookiejar)
@@ -90,11 +95,11 @@ class Client(object):
 
         # Attempt to log in to Amazon.
         # Note: We should end up with a redirect.
-        r = browser.open(self.PLAYER_URL)
+        r = browser.open(self.AUTH_URL)
 
         browser.select_form(name="signIn")
         browser.form['email'] = username
-        browser.form['password'] = password
+        browser.form['password'] = getpass.getpass()
         browser.form['create'] = False
         browser.submit()
 
@@ -103,11 +108,12 @@ class Client(object):
         # Get all the amznMusic variables being set.
         auth_vars = {
             'customer_id': None,
-            'cp_token': None,
+            'csrf_rnd': None,
+            'csrf_token': None,
+            'csrf_ts': None,
             'device_id': None,
             'device_type': None,
         }
-
         for line in content.splitlines():
             line = line.strip()
 
@@ -130,7 +136,9 @@ class Client(object):
                     auth_vars['customer_id'] = config['customerId']
                     auth_vars['device_id'] = config['deviceId']
                     auth_vars['device_type'] = config['deviceType']
-                    auth_vars['cp_token'] = config['xCpToken']
+                    auth_vars['csrf_rnd'] = config['CSRFTokenConfig']['csrf_rnd']
+                    auth_vars['csrf_token'] = config['CSRFTokenConfig']['csrf_token']
+                    auth_vars['csrf_ts'] = config['CSRFTokenConfig']['csrf_ts']
                 except KeyError, e:
                     logging.error("Unable to locate key %s in "
                                   "amznMusic.appConfig" % e)
@@ -291,7 +299,9 @@ class Client(object):
     def _get(self, operation, data):
         headers = {
             'x-amzn-RequestId': self._make_request_id(),
-            'x-cp-token': self.cp_token,
+            'csrf-rnd': self.csrf_rnd,
+            'csrf-token': self.csrf_token,
+            'csrf-ts': self.csrf_ts,
             'x-RequestedWith': 'XMLHttpRequest',
             'User-Agent': self.USER_AGENT,
             'Referer': self.REFERER,
@@ -310,7 +320,7 @@ class Client(object):
         })
 
         r = requests.post(self.API_URL, data=data, headers=headers)
-        result = r.json
+        result = r.json()
 
         if r.status_code != 200:
             error = result['Error']
@@ -329,14 +339,17 @@ class Client(object):
         session = json.loads(f.read())
         f.close()
 
-        if 'cp_token' not in session:
+        try:
+            self.customer_id = session['customer_id']
+            self.csrf_rnd = session['csrf_rnd']
+            self.csrf_token = session['csrf_token']
+            self.csrf_ts = session['csrf_ts']
+            self.device_id = session['device_id']
+            self.device_type = session['device_type']
+            self.cookies = session['cookies']
+        except KeyError:
             return
 
-        self.customer_id = session['customer_id']
-        self.cp_token = session['cp_token']
-        self.device_id = session['device_id']
-        self.device_type = session['device_type']
-        self.cookies = session['cookies']
         self.authenticated = True
 
     def _make_request_id(self):

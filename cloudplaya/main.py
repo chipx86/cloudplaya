@@ -32,13 +32,10 @@ class Authenticate(Command):
     def add_options(self, parser):
         parser.add_option('--username', default=None,
                           help='the username to log in as')
-        parser.add_option('--password', default='%(name)s',
-                          help='the password for your user')
 
     def run(self):
         try:
-            if self.client.authenticate(self.options.username,
-                                        self.options.password):
+            if self.client.authenticate(self.options.username):
                 print 'Authenticated successfully.'
             else:
                 sys.stderr.write('Authentication failed.\n')
@@ -290,8 +287,7 @@ def main():
     if not client.authenticated and command != COMMANDS['authenticate']:
         sys.stderr.write('You must authenticate before you can use '
                          'cloudplaya:\n')
-        sys.stderr.write('    $ cloud-playa authenticate --username <username> '
-                         '--password <password>\n')
+        sys.stderr.write('    $ cloudplaya authenticate --username <username>\n')
         sys.exit(2)
 
     command.client = client
@@ -299,3 +295,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
