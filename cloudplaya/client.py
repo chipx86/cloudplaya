@@ -138,7 +138,7 @@ class Client(object):
                     csrf_tokens = config['CSRFTokenConfig']
                     auth_vars['csrf_rnd'] = csrf_tokens['csrf_rnd']
                     auth_vars['csrf_token'] = csrf_tokens['csrf_token']
-                    auth_vars['csrf_ts'] = csrf_tokens['CSRFTokenConfig']['csrf_ts']
+                    auth_vars['csrf_ts'] = csrf_tokens['csrf_ts']
                 except KeyError, e:
                     logging.error("Unable to locate key %s in "
                                   "amznMusic.appConfig" % e)
