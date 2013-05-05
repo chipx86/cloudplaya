@@ -326,7 +326,7 @@ class Client(object):
         for x in xrange(5):
             try:
                 r = requests.post(self.API_URL, data=data, headers=headers, timeout=2, verify=False)
-                continue
+                if r: break
             except requests.exceptions.SSLError, e:
                 logging.error("SSL error. Feh. %s" % e)
             except requests.exceptions.Timeout, e:
