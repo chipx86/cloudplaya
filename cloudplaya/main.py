@@ -104,7 +104,11 @@ class DownloadAll(Command):
                 os.makedirs(os.path.dirname(out_path))
 
             print 'Downloading %s ...' % out_path
-            if not self.options.dry_run:
+            if self.options.dry_run:
+                print '  Dry run. Not actually downloading.'
+            elif os.path.getsize(out_path) > 0:
+                print 'file already exists. Skipping: %s' % out_path
+            else:
                 r = requests.get(url)
 
                 try:
