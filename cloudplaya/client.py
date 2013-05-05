@@ -65,6 +65,8 @@ class Client(object):
         self.cookies = None
         self.authenticated = False
 
+        requests.adapters.DEFAULT_RETRIES = 5
+
         if not self.session_file:
             if 'APPDATA' in os.environ:
                 homepath = os.environ['APPDATA']
@@ -140,7 +142,7 @@ class Client(object):
                     auth_vars['csrf_token'] = csrf_tokens['csrf_token']
                     auth_vars['csrf_ts'] = csrf_tokens['csrf_ts']
                 except KeyError, e:
-                    logging.error("Unable to locate key %s in "
+                    logging.error("Unable to locate key '%s' in "
                                   "amznMusic.appConfig" % e)
                     return False
 
@@ -319,7 +321,20 @@ class Client(object):
             'customerInfo.deviceType': self.device_type,
         })
 
-        r = requests.post(self.API_URL, data=data, headers=headers)
+        # do a few retries.
+        r = None
+        for x in xrange(5):
+            try:
+                r = requests.post(self.API_URL, data=data, headers=headers, timeout=2, verify=False)
+                continue
+            except requests.exceptions.SSLError, e:
+                logging.error("SSL error. Feh. %s" % e)
+            except requests.exceptions.Timeout, e:
+                logging.error("Hit timeout. %s" % e)
+
+        if not r:
+            raise RequestError("Failed to make request after several tries. Sorry it didn't work out.", 500)
+
         result = r.json()
 
         if r.status_code != 200:
