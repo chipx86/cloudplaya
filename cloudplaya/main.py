@@ -47,6 +47,86 @@ class Authenticate(Command):
             sys.exit(1)
 
 
+class DownloadAll(Command):
+    """Downloads all songs, all albums, all artists."""
+    DEFAULT_FORMAT = os.path.join('%(artist_name)s', '%(album_name)s',
+                                  '%(track_num)02d. %(title)s.%(extension)s')
+
+    def add_options(self, parser):
+        parser.add_option('--format', default=self.DEFAULT_FORMAT,
+                          help='format string for filenames')
+        parser.add_option('--start-at-artist', default=None,
+                          help='start partway into the list')
+        parser.add_option('-o', '--out-directory', default=None,
+                          help='the directory to save the files')
+        parser.add_option('--dry-run', default=False, action="store_true",
+                          help="Don't download, just go through the motions.")
+
+    def run(self):
+        artists_search = []
+        if self.options.start_at_artist:
+            artists_search.append(('artistName', 'GREATER_THAN_OR_EQUAL', self.options.start_at_artist))
+        for artist in self.client.get_artists(search=artists_search):
+            print "a: %s" % artist
+            self.get_artist(artist)
+
+    def get_artist(self, artist):
+        search = []
+        search.append(('artistName', 'EQUALS', artist))
+
+        try:
+            songs = list(self.client.get_songs(search))
+        except RequestError, e:
+            sys.stderr.write('Failed to download song information: %s\n' % e)
+            sys.exit(1)
+        print "songs: %s" % len(songs)
+
+        song_ids = [song.id for song in songs]
+
+        try:
+            urls = self.client.get_song_stream_urls(song_ids)
+        except RequestError, e:
+            sys.stderr.write('Failed to get stream URLs: %s\n' % e)
+            sys.exit(1)
+
+        out_dir = self.options.out_directory or os.getcwd()
+
+        for song, url in zip(songs, urls):
+            try:
+                out_filename = self.options.format % song.__dict__
+            except KeyError, e:
+                sys.stderr.write('Invalid format string key: %s' % e)
+                sys.exit(1)
+
+            out_path = os.path.join(out_dir, out_filename)
+
+            if not self.options.dry_run and not os.path.exists(os.path.dirname(out_path)):
+                os.makedirs(os.path.dirname(out_path))
+
+            print 'Downloading %s ...' % out_path
+            if not self.options.dry_run:
+                r = requests.get(url)
+
+                try:
+                    f = open(out_path, 'w')
+
+                    for chunk in r.iter_content(chunk_size=4096):
+                        f.write(chunk)
+
+                    f.close()
+                except IOError, e:
+                    sys.stderr.write('Unable to write file %s: %s' % (out_path, e))
+                    sys.exit(1)
+
+class GetAlbums(Command):
+    """Lists all the albums"""
+    DEFAULT_FORMAT = '%(name)s by %(artist_name)s (%(num_tracks)s tracks)'
+
+    def add_options(self, parser):
+        parser.add_option('--artist', default=None,
+                          help='list albums by the given artist')
+        parser.add_option('--format', default=self.DEFAULT_FORMAT,
+                          help='format string for each listed album')
 class DownloadAlbum(Command):
     """Downloads all the songs in an album."""
     DEFAULT_FORMAT = os.path.join('%(artist_name)s', '%(album_name)s',
@@ -101,7 +181,7 @@ class DownloadAlbum(Command):
             if not os.path.exists(os.path.dirname(out_path)):
                 os.makedirs(os.path.dirname(out_path))
 
-            print 'Downloading %s...' % out_path
+            print 'Downloading %s ...' % out_path
             r = requests.get(url)
 
             try:
@@ -236,6 +316,7 @@ class GetStreamURLs(Command):
 COMMANDS = {
     'authenticate': Authenticate(),
     'download-album': DownloadAlbum(),
+    'download-all': DownloadAll(),
     'get-albums': GetAlbums(),
     'get-album': GetAlbum(),
     'get-artists': GetArtists(),
