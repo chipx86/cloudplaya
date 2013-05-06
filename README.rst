@@ -166,3 +166,25 @@ For example::
     $ cloudplaya download-album --album "Walking With Strangers" --artist "The Birthday Massacre"
 
 Progress will be reported as the album downloads.
+
+download-all
+~~~~~~~~~~~~
+
+Downloads all songs by artist.
+
+This command has a ``--start-at-artist`` option, which will start downloading based on a
+specified artist name, skipping any entries are lexicographically smaller. To test this
+command, ``--dry-run`` will run through the steps without actually downloading. It can also
+take a ``--out-directory`` (or ``-o``) to specify where to save the files
+(defaults to the current directory).
+
+It also can take a ``--format`` option to specify the filename format (defaults
+to ``%(album_name)s/%(track_num)s. %(title)s.%(extension)s``). This will
+create any directories as needed.
+
+For example::
+
+    $ cloudplaya download-all --start-at-artist "Fartbarf" --dry-run --out-directory /tmp/
+
+Progress will be reported as the songs are downloaded.
+
