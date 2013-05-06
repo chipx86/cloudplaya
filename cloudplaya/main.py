@@ -106,7 +106,7 @@ class DownloadAll(Command):
             print 'Downloading %s ...' % out_path
             if self.options.dry_run:
                 print '  Dry run. Not actually downloading.'
-            elif os.path.getsize(out_path) > 0:
+            elif os.path.isfile(out_path) and os.path.getsize(out_path) > 0:
                 print 'file already exists. Skipping: %s' % out_path
             else:
                 r = requests.get(url)
